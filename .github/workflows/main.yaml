@@ -21,7 +21,7 @@ jobs:
           channels: conda-forge,defaults
           cache: 'conda'
 
-      - name: Ensure mamba is available
+      - name: Ensure mamba is available in base
         shell: bash -l {0}
         run: |
           set -e
@@ -40,44 +40,53 @@ jobs:
           mamba create -n mlflow-env python=3.9 mlflow -c conda-forge -y
 
           # Initialize conda for this shell and activate the env.
-          # Using 'conda activate' avoids using the mamba-run wrapper that produced the `exec: --: invalid option` error.
           eval "$(conda shell.bash hook)"
           conda activate mlflow-env
 
-          # Install any pip requirements (run inside activated env)
+          # Install pip requirements inside the activated env if any
           if [ -f requirements.txt ]; then
             pip install -r requirements.txt
           fi
 
-      - name: Verify mlflow is available
+      - name: Verify mlflow and show environment
         shell: bash -l {0}
         run: |
           set -e
           eval "$(conda shell.bash hook)"
           conda activate mlflow-env
 
-          mlflow --version
+          echo "MLflow and python versions:"
+          mlflow --version || true
           python -c "import sys; print(sys.executable)"
 
-      - name: Run your MLflow command or training script
+      - name: Show MLProject directory (debug)
+        shell: bash -l {0}
+        run: |
+          echo "Listing repo root:"
+          ls -la
+          echo "Listing MLProject directory (if exists):"
+          ls -la MLProject || true
+          echo "Showing MLproject-like files:"
+          find . -maxdepth 2 -type f -iname "mlproject" -o -iname "MLproject" -o -iname "MLProject" -print || true
+
+      - name: Run MLflow project (point explicitly to MLProject dir)
         shell: bash -l {0}
         run: |
           set -e
           eval "$(conda shell.bash hook)"
           conda activate mlflow-env
 
-          # Example: run an MLflow project (adjust to your project's command)
-          mlflow run . -P some_param=1
+          # Run the MLflow project that lives in the MLProject directory.
+          # IMPORTANT: ensure there is a file named exactly 'MLproject' (capitalization: M lowercase p).
+          mlflow run MLProject -P some_param=1
 
-          # Or run your script directly within the conda env:
-          # python src/train.py --config config.yaml
-
-      - name: Post-job
+      - name: Post-job - upload artifacts/logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: mlflow-logs
           path: |
+            MLProject/mlruns
             ./mlruns
             ./logs
             path/to/artifacts

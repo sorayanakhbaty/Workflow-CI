@@ -21,9 +21,23 @@ jobs:
           channels: conda-forge,defaults
           cache: 'conda'
 
+      - name: Ensure mamba is available
+        shell: bash -l {0}
+        run: |
+          set -e
+          # If mamba is not on PATH (sometimes setup-miniconda doesn't expose it),
+          # install it into the base environment using conda which should be present.
+          if ! command -v mamba >/dev/null 2>&1; then
+            echo "mamba not found — installing mamba into base environment..."
+            conda install -n base -c conda-forge mamba -y
+          else
+            echo "mamba is already installed"
+          fi
+
       - name: Create conda environment and install MLflow
         shell: bash -l {0}
         run: |
+          set -e
           # Create environment with MLflow and any runtime dependencies you want
           mamba create -n mlflow-env python=3.9 mlflow -c conda-forge -y
 
@@ -38,6 +52,7 @@ jobs:
       - name: Verify mlflow is available
         shell: bash -l {0}
         run: |
+          set -e
           mamba run -n mlflow-env --no-capture-output mlflow --version
           # show python path inside env
           mamba run -n mlflow-env --no-capture-output python -c "import sys; print(sys.executable)"
@@ -45,6 +60,7 @@ jobs:
       - name: Run your MLflow command or training script
         shell: bash -l {0}
         run: |
+          set -e
           # Example: run an MLflow project (adjust to your project's command)
           # Use mamba/conda run so the mlflow binary from the conda env is used
           mamba run -n mlflow-env --no-capture-output mlflow run . -P some_param=1

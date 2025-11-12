@@ -52,7 +52,7 @@ jobs:
           # Or run your script directly within the conda env:
           # mamba run -n mlflow-env --no-capture-output python src/train.py --config config.yaml
 
-      - name: Post-job: upload artifacts (optional)
+      - name: Post-job
         if: always()
         uses: actions/upload-artifact@v4
         with:

@@ -1,41 +1,60 @@
 name: MLflow CI Training
 
-# Trigger: Berjalan saat ada push ke branch master
 on:
   push:
-    branches:
-      - master # <-- DIUBAH DARI 'main'
+  pull_request:
 
 jobs:
-  train-model:
+  train:
+    name: Train (conda + MLflow)
     runs-on: ubuntu-latest
-
     steps:
-    # 1. Checkout kode repository
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    # 2. Setup Conda (termasuk Python 3.9)
-    # Ini diperlukan karena MLProject Anda mereferensikan 'conda.yaml'
-    - name: Set up Conda (termasuk Python 3.9)
-      uses: conda-incubator/setup-miniconda@v2
-      with:
-        python-version: '3.9'
-        auto-activate-base: true # Penting agar 'conda' dikenali
+      - name: Set up Miniconda (mamba enabled, cached)
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          auto-update-conda: true
+          python-version: 3.9
+          use-mamba: true
+          channels: conda-forge,defaults
+          cache: 'conda'
 
-    # 3. Install dependencies untuk runner (terutama MLflow client)
-    # Step ini tetap diperlukan agar runner dapat menemukan perintah 'mlflow run'
+      - name: Create conda environment and install MLflow
+        shell: bash -l {0}
+        run: |
+          # Create environment with MLflow and any runtime dependencies you want
+          mamba create -n mlflow-env python=3.9 mlflow -c conda-forge -y
 
-    # 3.a Ensure conda shell functions are available in non-interactive bash
-    - name: Initialize Conda for bash
-      run: |
-        eval "$(conda shell.bash hook)"
+          # If you have additional dependencies, install them:
+          # - If you maintain environment.yml in repo:
+          #     mamba env update -n mlflow-env --file environment.yml
+          # - If you have requirements.txt:
+          if [ -f requirements.txt ]; then
+            mamba run -n mlflow-env --no-capture-output pip install -r requirements.txt
+          fi
 
-    # 4. Jalankan MLflow Project
-    # Perintah ini sekarang akan berhasil:
-    # - Membaca file 'MLProject'
-    # - Melihat 'conda_env: conda.yaml'
-    # - Menggunakan 'conda' (dari Step 2) untuk membuat env dari 'conda.yaml'
-    # - Menjalankan 'command' (python modelling.py) di dalam env baru tersebut
-    - name: Run MLflow Project
-      run: mlflow run MLProject/
+      - name: Verify mlflow is available
+        shell: bash -l {0}
+        run: |
+          mamba run -n mlflow-env --no-capture-output mlflow --version
+          # show python path inside env
+          mamba run -n mlflow-env --no-capture-output python -c "import sys; print(sys.executable)"
+
+      - name: Run your MLflow command or training script
+        shell: bash -l {0}
+        run: |
+          # Example: run an MLflow project (adjust to your project's command)
+          # Use mamba/conda run so the mlflow binary from the conda env is used
+          mamba run -n mlflow-env --no-capture-output mlflow run . -P some_param=1
+
+          # Or run your script directly within the conda env:
+          # mamba run -n mlflow-env --no-capture-output python src/train.py --config config.yaml
+
+      - name: Post-job: upload artifacts (optional)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mlflow-logs
+          path: ./mlruns || ./logs || path/to/artifacts

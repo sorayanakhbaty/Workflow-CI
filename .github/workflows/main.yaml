@@ -4,7 +4,7 @@ name: MLflow CI Training
 on:
   push:
     branches:
-      - main
+      - master
 
 jobs:
   train-model:

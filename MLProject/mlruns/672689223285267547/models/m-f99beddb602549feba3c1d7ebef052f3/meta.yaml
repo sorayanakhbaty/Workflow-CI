@@ -1,0 +1,10 @@
+artifact_location: file:///D:/Tugas%20Tugas%20ASAH/MSML-Soraya%20Nakhbaty/Workflow-CI/MLProject/mlruns/672689223285267547/models/m-f99beddb602549feba3c1d7ebef052f3/artifacts
+creation_timestamp: 1762970708201
+experiment_id: '672689223285267547'
+last_updated_timestamp: 1762970720062
+model_id: m-f99beddb602549feba3c1d7ebef052f3
+model_type: null
+name: model
+source_run_id: 1d2a4f3991024d148d11a03ab6455eb6
+status: 2
+status_message: null
